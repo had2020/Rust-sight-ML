@@ -7,12 +7,12 @@ fn relu(x: f64) -> f64 {
 }
 
 fn main() {
-    let inputs = vec![1.0, 2.0, 3.0];
-    let mut weights = vec![0.5, -0.6, 0.2];
-    let mut bias = 0.1;
-    let target = 1.5; // Example target output
+    let inputs: Vec<f64> = vec![1.0, 2.0, 3.0]; // Incoming signals, could come from other neurons
+    let mut weights: Vec<f64> = vec![0.5, -0.6, 0.2]; // Signal importance: determines whether to strengthen or weaken the signal
+    let mut bias: f64 = 0.1; // Adjusts weight: determines whether the neuron should fire
+    let target: f64 = 1.5; // Example target output
 
-    let learning_rate = 0.01;
+    let learning_rate: f64 = 0.01; // Learning rate for weight adjustments
 
     for epoch in 0..1000 { // Train for 1000 epochs
         // Forward pass
@@ -23,7 +23,7 @@ fn main() {
             .sum::<f64>()
             + bias;
 
-        let output = relu(weighted_sum);
+        let output = relu(weighted_sum); // Result after activation (action potential)
 
         // Compute loss (mean squared error)
         let loss = (output - target).powi(2);
@@ -39,6 +39,7 @@ fn main() {
         }
         bias -= learning_rate * total_gradient;
 
+        // Display progress every 100 epochs
         if epoch % 100 == 0 {
             println!("Epoch {}: Loss = {}", epoch, loss);
         }
