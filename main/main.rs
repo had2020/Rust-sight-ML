@@ -1,5 +1,6 @@
 fn relu(x: f64) -> f64 {
     // Activation function: ReLU (Rectified Linear Unit)
+    // takes a input returns same if positive, and 0 if neagtive 
     if x > 0.0 {
         x
     } else {
@@ -10,7 +11,12 @@ fn relu(x: f64) -> f64 {
 fn main() {
     // Input signals, weights, bias, and target
     let inputs: Vec<f64> = vec![1.0, 2.0, 3.0]; // Incoming signals, could come from other neurons
-    let mut weights: Vec<f64> = vec![0.5, -0.6, 0.2]; // Signal importance: determines whether to strengthen or weaken the signal
+    let weights = vec![ // Signal importance: determines whether to strengthen or weaken the signal
+        vec![ // Layer 1
+            vec![0.5, -0.6, 0.2],
+            vec![0.3, 0.8, -0.5],
+        ],
+    ]; 
     let mut bias: f64 = 0.1; // Adjusts weight: determines whether the neuron should fire
     let target: f64 = 1.5; // Desired output value
 
@@ -65,7 +71,7 @@ fn main() {
 
     // Verify final output
     let final_weighted_sum: f64 = inputs
-        .iter()
+        .iter() 
         .zip(weights.iter())
         .map(|(input, weight)| input * weight)
         .sum::<f64>()
