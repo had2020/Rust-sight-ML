@@ -4,4 +4,5 @@ version = "0.1.0"
 edition = "2021"
 
 [dependencies]
-tch = "0.18.0"
+burn = "0.15.0"
+metal = "0.30.0"

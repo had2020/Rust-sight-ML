@@ -1,40 +1,87 @@
-use tch::{nn, nn::OptimizerConfig, Tensor};
+fn relu(x: f64) -> f64 {
+    // Activation function: ReLU (Rectified Linear Unit)
+    // takes a input returns same if positive, and 0 if neagtive 
+    if x > 0.0 {
+        x
+    } else {
+        0.0
+    }
+}
 
-fn main() -> Result<(), Box<dyn std::error::Error>> {
-    // Create a simple tensor
-    let tensor = Tensor::of_slice(&[1.0, 2.0, 3.0, 4.0, 5.0]);
-    println!("Original tensor: {:?}", tensor);
+fn main() {
+    // Input signals, weights, bias, and target
+    let inputs: Vec<f64> = vec![1.0, 2.0, 3.0]; // Incoming signals, could come from other neurons
+    let weights = vec![ // Signal importance: determines whether to strengthen or weaken the signal
+        vec![ // Layer 1
+            vec![0.5, -0.6, 0.2],
+            vec![0.3, 0.8, -0.5],
+        ],
+    ]; 
+    let mut bias: f64 = 0.1; // Adjusts weight: determines whether the neuron should fire
+    let target: f64 = 1.5; // Desired output value
 
-    // Perform basic operations
-    let squared = tensor * tensor;
-    println!("Squared tensor: {:?}", squared);
+    let learning_rate: f64 = 0.01; // Learning rate for weight updates
+    let max_epochs = 1000; // Maximum number of training epochs
+    let stopping_threshold: f64 = 1e-10; // Early stopping if loss is very small
 
-    // Define a simple linear regression model
-    let vs = nn::VarStore::new(tch::Device::Cpu);
-    let linear = nn::linear(&vs.root(), 1, 1, Default::default());
+    for epoch in 0..max_epochs {
+        // Forward pass: Compute the weighted sum
+        let weighted_sum: f64 = inputs
+            .iter()
+            .zip(weights.iter())
+            .map(|(input, weight)| input * weight)
+            .sum::<f64>()
+            + bias;
 
-    // Training data
-    let xs = Tensor::of_slice(&[1.0, 2.0, 3.0, 4.0]).unsqueeze(1);
-    let ys = Tensor::of_slice(&[2.0, 4.0, 6.0, 8.0]).unsqueeze(1);
+        // Apply activation function (ReLU)
+        let output = relu(weighted_sum);
 
-    // Optimizer
-    let mut opt = nn::Sgd::default().build(&vs, 0.01)?;
+        // Compute loss (mean squared error)
+        let loss = (output - target).powi(2);
 
-    // Training loop
-    for epoch in 1..101 {
-        let predictions = xs.apply(&linear);
-        let loss = predictions.mse_loss(&ys, tch::Reduction::Mean);
-        opt.backward_step(&loss);
+        // Backpropagation: Compute gradients
+        let error_gradient = 2.0 * (output - target); // Derivative of MSE loss
+        let relu_gradient = if weighted_sum > 0.0 { 1.0 } else { 0.0 }; // Derivative of ReLU
+        let total_gradient = error_gradient * relu_gradient;
 
-        if epoch % 10 == 0 {
-            println!("Epoch: {}, Loss: {:?}", epoch, f64::from(&loss));
+        // Update weights and bias
+        for i in 0..weights.len() {
+            weights[i] -= learning_rate * total_gradient * inputs[i];
+        }
+        bias -= learning_rate * total_gradient;
+
+        // Display loss and status every 100 epochs
+        if epoch % 100 == 0 || loss < stopping_threshold {
+            println!(
+                "Epoch {}: Loss = {:.15e}, Output = {:.5}, Target = {:.5}",
+                epoch, loss, output, target
+            );
+        }
+
+        // Early stopping if the loss is sufficiently small
+        if loss < stopping_threshold {
+            println!("Early stopping at epoch {} due to low loss.", epoch);
+            break;
         }
     }
 
-    // Test the trained model
-    let test_xs = Tensor::of_slice(&[5.0, 6.0]).unsqueeze(1);
-    let test_preds = test_xs.apply(&linear);
-    println!("Predictions for input {:?}: {:?}", test_xs, test_preds);
+    // Final weights and bias
+    println!("\nTrained Weights: {:?}", weights);
+    println!("Trained Bias: {}", bias);
 
-    Ok(())
+    // Verify final output
+    let final_weighted_sum: f64 = inputs
+        .iter() 
+        .zip(weights.iter())
+        .map(|(input, weight)| input * weight)
+        .sum::<f64>()
+        + bias;
+    let final_output = relu(final_weighted_sum);
+
+    println!(
+        "Final Output = {:.5}, Target = {:.5}, Final Loss = {:.15e}",
+        final_output,
+        target,
+        (final_output - target).powi(2)
+    );
 }
