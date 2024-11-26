@@ -4,5 +4,4 @@ version = "0.1.0"
 edition = "2021"
 
 [dependencies]
-burn = "0.15.0"
-metal = "0.30.0"
+candle-core = { git = "https://github.com/huggingface/candle.git", version = "0.8.0", features = ["metal", "accelerate"] }

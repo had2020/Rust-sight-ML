@@ -1,87 +1,41 @@
-fn relu(x: f64) -> f64 {
-    // Activation function: ReLU (Rectified Linear Unit)
-    // takes a input returns same if positive, and 0 if neagtive 
-    if x > 0.0 {
-        x
-    } else {
-        0.0
+use candle_core::backend::BackendDevice;
+use candle_core::MetalDevice;
+use candle_core::{Device, Result, Tensor};
+
+struct Model {
+    first: Tensor,
+    second: Tensor,
+}
+
+impl Model {
+    fn forward(&self, image: &Tensor) -> Result<Tensor> {
+        let x = image.matmul(&self.first)?;
+        let x = x.relu()?;
+        x.matmul(&self.second)
     }
 }
 
-fn main() {
-    // Input signals, weights, bias, and target
-    let inputs: Vec<f64> = vec![1.0, 2.0, 3.0]; // Incoming signals, could come from other neurons
-    let weights = vec![ // Signal importance: determines whether to strengthen or weaken the signal
-        vec![ // Layer 1
-            vec![0.5, -0.6, 0.2],
-            vec![0.3, 0.8, -0.5],
-        ],
-    ]; 
-    let mut bias: f64 = 0.1; // Adjusts weight: determines whether the neuron should fire
-    let target: f64 = 1.5; // Desired output value
-
-    let learning_rate: f64 = 0.01; // Learning rate for weight updates
-    let max_epochs = 1000; // Maximum number of training epochs
-    let stopping_threshold: f64 = 1e-10; // Early stopping if loss is very small
-
-    for epoch in 0..max_epochs {
-        // Forward pass: Compute the weighted sum
-        let weighted_sum: f64 = inputs
-            .iter()
-            .zip(weights.iter())
-            .map(|(input, weight)| input * weight)
-            .sum::<f64>()
-            + bias;
-
-        // Apply activation function (ReLU)
-        let output = relu(weighted_sum);
-
-        // Compute loss (mean squared error)
-        let loss = (output - target).powi(2);
-
-        // Backpropagation: Compute gradients
-        let error_gradient = 2.0 * (output - target); // Derivative of MSE loss
-        let relu_gradient = if weighted_sum > 0.0 { 1.0 } else { 0.0 }; // Derivative of ReLU
-        let total_gradient = error_gradient * relu_gradient;
-
-        // Update weights and bias
-        for i in 0..weights.len() {
-            weights[i] -= learning_rate * total_gradient * inputs[i];
+fn main() -> Result<()> {
+    //let device = Device::Cpu;
+    let metal_device = match MetalDevice::new(0) {
+        Ok(device) => device,
+        Err(e) => {
+            eprintln!("Failed to create MetalDevice: {:?}", e);
+            return Err(e); // Or handle the error appropriately.
         }
-        bias -= learning_rate * total_gradient;
+    };
+    let device = Device::Metal(metal_device);
 
-        // Display loss and status every 100 epochs
-        if epoch % 100 == 0 || loss < stopping_threshold {
-            println!(
-                "Epoch {}: Loss = {:.15e}, Output = {:.5}, Target = {:.5}",
-                epoch, loss, output, target
-            );
-        }
 
-        // Early stopping if the loss is sufficiently small
-        if loss < stopping_threshold {
-            println!("Early stopping at epoch {} due to low loss.", epoch);
-            break;
-        }
-    }
+    let first = Tensor::randn(0f32, 1.0, (784, 100), &device)?;
+    let second = Tensor::randn(0f32, 1.0, (100, 10), &device)?;
+    let model = Model { first, second };
 
-    // Final weights and bias
-    println!("\nTrained Weights: {:?}", weights);
-    println!("Trained Bias: {}", bias);
+    let dummy_image = Tensor::randn(0f32, 1.0, (1, 784), &device)?;
 
-    // Verify final output
-    let final_weighted_sum: f64 = inputs
-        .iter() 
-        .zip(weights.iter())
-        .map(|(input, weight)| input * weight)
-        .sum::<f64>()
-        + bias;
-    let final_output = relu(final_weighted_sum);
+    let digit = model.forward(&dummy_image)?;
 
-    println!(
-        "Final Output = {:.5}, Target = {:.5}, Final Loss = {:.15e}",
-        final_output,
-        target,
-        (final_output - target).powi(2)
-    );
+    
+    println!("Digit {digit:?} digit");
+    Ok(())
 }
