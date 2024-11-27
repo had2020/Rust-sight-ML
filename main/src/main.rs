@@ -36,11 +36,14 @@ fn main() -> Result<()> {
     let third = Tensor::randn(0f32, 1.0, (10, 10), &device)?;
     let model = Model { first, second, third };
 
-    let dummy_image = Tensor::randn(0f32, 1.0, (1, 784), &device)?;
+    let input_image = Tensor::randn(0f32, 1.0, (1, 784), &device)?;
 
-    let digit = model.forward(&dummy_image)?;
+    let digit = model.forward(&input_image)?;
 
+    //let probabilities = candle_nn::ops::softmax(xs, dim); //xs-input-tensor, dim coloums 0-2D
+    let probabilities = candle_nn::ops::softmax(&digit, 1);
 
-    println!("Digit {digit:?} digit");
+    println!("probabilities: {probabilities:?}");
+    //println!("Digit: {digit:?} digit");
     Ok(())
 }

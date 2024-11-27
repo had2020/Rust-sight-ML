@@ -105,6 +105,20 @@ dependencies = [
 ]
 
 [[package]]
+name = "candle-nn"
+version = "0.8.0"
+source = "git+https://github.com/huggingface/candle.git#21c686387cead049aad32e6d1cc494d6c79e46e3"
+dependencies = [
+ "candle-core",
+ "half",
+ "num-traits",
+ "rayon",
+ "safetensors",
+ "serde",
+ "thiserror",
+]
+
+[[package]]
 name = "cc"
 version = "1.2.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -469,6 +483,7 @@ name = "main"
 version = "0.1.0"
 dependencies = [
  "candle-core",
+ "candle-nn",
 ]
 
 [[package]]
