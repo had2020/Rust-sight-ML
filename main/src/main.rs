@@ -86,7 +86,7 @@ fn main() -> Result<()> {
 
     // training loops
     for epoch in 0..500 { 
-        // everything under foward and softmax needs to be fixed
+        // everything under foward and softmax needs to be
 
         // a forward pass
         let logits = model.forward(&input_image)?;
