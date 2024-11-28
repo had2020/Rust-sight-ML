@@ -128,9 +128,12 @@ fn main() -> Result<()> {
 
         // update weights 
         //let scalar = learning_rate * total_gradient.to_f64();
+        // TODO fix below
         let scalar = loss.to_f64();
 
         model.first_weights = (&first_weights - scalar)?;
+        model.second_weights = (&second_weights - scalar)?;
+        model.third_weights = (&third_weights - scalar)?;
 
         /* 
         let learning_rate_tensor = Tensor::new(&[learning_rate], &device)?;
