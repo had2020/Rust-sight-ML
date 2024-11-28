@@ -1,7 +1,8 @@
 use candle_core::backend::BackendDevice;
-use candle_core::{MetalDevice, WithDType};
+use candle_core::{scalar, MetalDevice, WithDType};
 use candle_core::{Device, Result, Tensor};
 
+//TODO rewrite
 fn cross_entropy_loss(predictions: &[f32], target: usize) -> f32 {
     // makes predictions that are valid probabilities
     let eps = 1e-10; // prevents log(0)
@@ -62,6 +63,7 @@ fn main() -> Result<()> {
     let second_weights = Tensor::randn(0f32, 1.0, (100, 10), &device)?;
     let third_weights = Tensor::randn(0f32, 1.0, (10, 10), &device)?;
 
+    // TODO zeros
     let first_bias = Tensor::randn(0f32, 1.0, (1, 100), &device)?;
     let second_bias = Tensor::randn(0f32, 1.0, (1, 10), &device)?;
     let third_bias = Tensor::randn(0f32, 1.0, (1, 10), &device)?;
@@ -84,6 +86,8 @@ fn main() -> Result<()> {
 
     // training loops
     for epoch in 0..500 { 
+        // everything under foward and softmax needs to be fixed
+
         // a forward pass
         let logits = model.forward(&input_image)?;
 
@@ -123,7 +127,8 @@ fn main() -> Result<()> {
         }
 
         // update weights 
-        let scalar = learning_rate * total_gradient.to_f64();
+        //let scalar = learning_rate * total_gradient.to_f64();
+        let scalar = loss.to_f64();
 
         model.first_weights = (&first_weights - scalar)?;
 
