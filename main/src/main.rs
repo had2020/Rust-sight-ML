@@ -119,14 +119,30 @@ fn main() -> Result<()> {
             println!("Loss: {}", loss);
             println!("Relu gradient: {}", relu_gradient);
             println!("Error gradient: {}", error_gradient);
+            println!("Total gradients: {}", total_gradient);
         }
 
         // update weights 
         let scalar = learning_rate * total_gradient.to_f64();
-        
+
+        model.first_weights = (&first_weights - scalar)?;
+
+        /* 
+        let learning_rate_tensor = Tensor::new(&[learning_rate], &device)?;
+
+        let vec_first_weights = first_weights.clone().to_vec2::<f32>()?;
+        for 
+        vec_first_weights
+        */
+
+
+        /* 
+        let scalar = learning_rate * total_gradient.to_f64();
+
         model.first_weights = first_weights.clone().affine(1.0, scalar)?;
         model.second_weights = second_weights.clone().affine(1.0, scalar)?;
         model.third_weights = third_weights.clone().affine(1.0, scalar)?;
+        */
     }
 
     Ok(())
