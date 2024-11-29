@@ -1,28 +1,11 @@
 use candle_core::backend::BackendDevice;
 use candle_core::{scalar, MetalDevice, WithDType};
 use candle_core::{Device, Result, Tensor};
-
-//TODO rewrite
-fn cross_entropy_loss(predictions: &[f32], target: usize) -> f32 {
-    // makes predictions that are valid probabilities
-    let eps = 1e-10; // prevents log(0)
-    -predictions[target].max(eps).ln()
-}
-
-
-fn error_gradient(predictions: &[f32], target: usize) -> f32 {
-    let eps = 1e-10; 
-    let x = -predictions[target].max(eps).ln();
-    return x * 2.0_f32
-}
-
-fn relu_gradient(weighted_sum: f32) -> f32 {
-    if weighted_sum > 0.0_f32 {
-        weighted_sum
-    } else {
-        0.0_f32
-    }
-}
+use candle_nn::{ops, AdamW};
+use candle_nn::loss::{binary_cross_entropy_with_logit, cross_entropy};
+use candle_nn::{Module, Optimizer};
+use candle_core::Var;
+use candle_nn::ParamsAdamW;
 
 struct Model {
     first_weights: Tensor,
@@ -57,6 +40,8 @@ fn main() -> Result<()> {
             Device::Cpu
         }
     };
+    
+    //let device = Device::Cpu;
 
     // setup model
     let first_weights = Tensor::randn(0f32, 1.0, (784, 100), &device)?;
@@ -81,76 +66,60 @@ fn main() -> Result<()> {
     let input_image = Tensor::randn(0f32, 1.0, (1, 784), &device)?;
     //let target_label = Tensor::new(&[1], &device)?; // Example: label 1
 
-    // the learning rate
+    let config = ParamsAdamW {
+        lr: 0.001,          // learning rate
+        beta1: 0.9,         // beta1 coefficient
+        beta2: 0.999,       // beta2 coefficient
+        eps: 1e-8,          // epsilon for numerical stability
+        weight_decay: 0.01, // weight decay (L2 regularization)
+    };  
+
+    let first_var = Var::from_tensor(&first_weights)?;
+    let second_var = Var::from_tensor(&second_weights)?;
+    let third_var = Var::from_tensor(&third_weights)?;
+    let first_bias_var = Var::from_tensor(&first_bias)?;
+    let second_bias_var = Var::from_tensor(&second_bias)?;
+    let third_bias_var = Var::from_tensor(&third_bias)?;
+
+    let layers = vec![
+        first_var,
+        second_var,
+        third_var,
+        first_bias_var,
+        second_bias_var,
+        third_bias_var,
+    ];
+
+    let mut optimizer = AdamW::new(layers, config)?;
+
+
     let learning_rate = 0.01;
 
-    // training loops
-    for epoch in 0..500 { 
-        // everything under foward and softmax needs to be
+    let target= Tensor::new(&[1.0_f32], &device)?;
+    
+    for epoch in 0..10 { 
 
-        // a forward pass
         let logits = model.forward(&input_image)?;
 
-        // softmax for output probabilities
-        let probabilities = candle_nn::ops::softmax(&logits, 1)?;
+        //let loss = (cross_entropy(&logits, &target)?);
+        let loss= binary_cross_entropy_with_logit(&logits, &target)?;
+        //let loss= candle_nn::loss::cross_entropy(&logits, &target)?;
 
-        // convert the flattened tensor to a Vec<f32>
-        //let probabilities_vec: Vec<f64> = probabilities.to_vec1()?; // to_vec1 for 1D tensors
-        let probabilities_vec: Vec<f32> = probabilities.squeeze(0)?.to_vec1()?;
+        // Backward pass
+        optimizer.backward_step(&loss)?;
 
-        let target_label = 1; // example replace, it is the class it should be
+        //optimizer.step()?;
 
-        // next two lines debug variables
-        let loss = cross_entropy_loss(&probabilities_vec, target_label);
-        //let loss = candle_nn::loss::cross_entropy(inp, target) TODO
-        //let predicted_class = probabilities.argmax(1)?;
+        //optimizer.zero_grad()?;
 
-        let predicted_class_d = probabilities.argmax(1)?.to_dtype(candle_core::DType::F32)?;
-        //let f32_predicted_class = predicted_class.to_scalar::<f32>()?; // tensor to f32
-        //let f32_predicted_class = predicted_class.get(0)?.to_scalar::<f32>()?;
-        let f32_predicted_class = predicted_class_d.squeeze(0)?.to_scalar::<f32>()?;
-
-        // backward pass (computing gradients)
-        let error_gradient:f32 = error_gradient(&probabilities_vec, target_label);
-        let relu_gradient:f32 = relu_gradient(f32_predicted_class);
-        let total_gradient:f32 = error_gradient + relu_gradient;
-
-        // display
-        if epoch % 100 == 0 {
-            println!("\n Epoch: {epoch} \n ----------- \n"); // just for readablity
-            println!("Predicted class: {}", f32_predicted_class);
-            println!("Probabilities: {probabilities_vec:?}");
-            println!("Loss: {}", loss);
-            println!("Relu gradient: {}", relu_gradient);
-            println!("Error gradient: {}", error_gradient);
-            println!("Total gradients: {}", total_gradient);
-        }
-
-        // update weights 
-        //let scalar = learning_rate * total_gradient.to_f64();
-        // TODO fix below
-        let scalar = loss.to_f64();
+        /* 
+        let scalar = 1_f64; //loss.to_f64();
 
         model.first_weights = (&first_weights - scalar)?;
         model.second_weights = (&second_weights - scalar)?;
         model.third_weights = (&third_weights - scalar)?;
-
-        /* 
-        let learning_rate_tensor = Tensor::new(&[learning_rate], &device)?;
-
-        let vec_first_weights = first_weights.clone().to_vec2::<f32>()?;
-        for 
-        vec_first_weights
         */
-
-
-        /* 
-        let scalar = learning_rate * total_gradient.to_f64();
-
-        model.first_weights = first_weights.clone().affine(1.0, scalar)?;
-        model.second_weights = second_weights.clone().affine(1.0, scalar)?;
-        model.third_weights = third_weights.clone().affine(1.0, scalar)?;
-        */
+        println!("loss {}", loss)
     }
 
     Ok(())
